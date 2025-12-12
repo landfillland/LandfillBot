@@ -1,14 +1,15 @@
-name: AstrBot Dashboard CI - Dashboard-only (pnpm fixed)
+name: AstrBot Dashboard CI
 
+# 仅在 dashboard 目录变更时触发；并允许手动触发
 on:
   push:
     branches: ["master"]
     paths:
-      - 'dashboard/**'
+      - "dashboard/**"
   pull_request:
     branches: ["master"]
     paths:
-      - 'dashboard/**'
+      - "dashboard/**"
   workflow_dispatch: {}
 
 concurrency:
@@ -21,35 +22,53 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository (full history)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js 20
+      - name: Debug runner & env
+        run: |
+          echo "Runner: $RUNNER_OS"
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "PATH: $PATH"
+          echo "Node tool cache:"
+          ls -la /opt/hostedtoolcache || true
+
+      - name: Setup Node.js 20 (explicit inline, 不用 env)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          cache: 'pnpm' # 加速 pnpm 缓存（可选）
 
-      - name: Setup pnpm (preferred)
+      - name: Ensure pnpm (preferred: pnpm action) 
         uses: pnpm/action-setup@v2
         with:
-          version: '8'       
-          run_install: false 
+          version: '8'
+          run_install: false
 
-      - name: Ensure pnpm available (corepack fallback)
+      - name: Fallback / guaranteed pnpm install (global)
         run: |
           set -eux
-          if ! command -v pnpm >/dev/null 2>&1; then
-            echo "pnpm not found from pnpm/action-setup — using corepack fallback"
-            corepack enable
-            corepack prepare pnpm@8.8.0 --activate || true
+          # 尝试 corepack first (Node 20 自带)
+          if command -v pnpm >/dev/null 2>&1; then
+            echo "pnpm already present: $(pnpm --version)"
           else
-            echo "pnpm already available: $(pnpm --version)"
+            echo "pnpm not found, try corepack prepare..."
+            corepack enable || true
+            corepack prepare pnpm@8 --activate || true
           fi
+
+          # 最终兜底：npm 全局安装（有时 corepack/ action 失效时此法万无一失）
+          if ! command -v pnpm >/dev/null 2>&1; then
+            echo "corepack failed to provide pnpm, installing globally via npm..."
+            npm i -g pnpm@8
+          fi
+
+          echo "Final pnpm: $(pnpm --version)"
+          echo "Which pnpm: $(command -v pnpm || true)"
+          echo "NODE: $(node -v) NPM: $(npm -v)"
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -63,17 +82,19 @@ jobs:
         working-directory: dashboard
         run: |
           set -eux
-          # double-check pnpm availability before running
-          echo "pnpm version: $(pnpm --version)"
+          echo "pwd: $(pwd)"
+          echo "ls:"
+          ls -la
+          pnpm --version
           pnpm install --frozen-lockfile
           pnpm run build
 
-      - name: Inject commit SHA, clean .md, package dist
+      - name: Inject commit SHA, clean markdown and zip dist
         run: |
           set -eux
           TARGET_DIST="dashboard/dist"
           if [ ! -d "${TARGET_DIST}" ]; then
-            echo "Build output '${TARGET_DIST}' not found" >&2
+            echo "ERROR: build output '${TARGET_DIST}' not found" >&2
             ls -la dashboard || true
             exit 1
           fi
@@ -82,25 +103,33 @@ jobs:
           echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
           mkdir -p "${TARGET_DIST}/assets"
           echo "${COMMIT_SHA}" > "${TARGET_DIST}/assets/version"
+
+          # 删除所有 markdown 文件（按你的要求）
           find "${TARGET_DIST}" -type f -name "*.md" -print -delete || true
 
-          ZIP_NAME="dist-${COMMIT_SHA}.zip"
+          ZIP_NAME="dashboard-dist-${COMMIT_SHA}.zip"
           cd dashboard
           zip -r "../${ZIP_NAME}" dist
           cd -
           echo "ZIPPED=${ZIP_NAME}" >> $GITHUB_ENV
 
-      - name: Upload production artifact (zip)
+      - name: Upload artifact (zip)
         uses: actions/upload-artifact@v5
         with:
           name: dashboard-dist-${{ env.COMMIT_SHA }}
           path: ${{ env.ZIPPED }}
           retention-days: 7
 
-      - name: Upload latest pointer (optional)
+      - name: Upload latest pointer (version file)
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: dashboard-dist-latest
           path: dashboard/dist/assets/version
           retention-days: 3
+
+      - name: Final debug (list dist)
+        if: always()
+        run: |
+          set -eux
+          echo "dist exists?"; ls -la dashboard/dist || true
