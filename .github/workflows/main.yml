@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout target repository (full history, allow pushes)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
@@ -57,7 +57,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check_commits.outputs.new_commits != '0'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.PAT }}
           # 与上一步推送的分支名一致
