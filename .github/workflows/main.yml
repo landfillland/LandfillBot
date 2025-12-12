@@ -45,7 +45,7 @@ jobs:
           git fetch --no-tags --prune upstream ${UPSTREAM_BRANCH}
           git fetch --no-tags --prune origin ${TARGET_BRANCH}
 
-      - name: Debug: show remotes and SHAs
+      - name: Debug - show remotes and SHAs
         run: |
           echo "Remotes:"
           git remote -v
