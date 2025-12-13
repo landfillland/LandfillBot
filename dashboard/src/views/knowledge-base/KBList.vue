@@ -12,7 +12,7 @@
 
     <!-- 操作按钮栏 -->
     <div class="action-bar mb-6">
-      <v-btn prepend-icon="mdi-plus" color="primary" variant="elevated" @click="showCreateDialog = true">
+      <v-btn prepend-icon="mdi-plus" color="primary" variant="flat" @click="showCreateDialog = true">
         {{ t('list.create') }}
       </v-btn>
       <v-btn prepend-icon="mdi-refresh" variant="tonal" @click="loadKnowledgeBases" :loading="loading">
@@ -57,7 +57,7 @@
     <div v-else class="empty-state">
       <v-icon size="100" color="grey-lighten-2">mdi-book-open-variant</v-icon>
       <h2 class="mt-4">{{ t('list.empty') }}</h2>
-      <v-btn class="mt-6" prepend-icon="mdi-plus" color="primary" variant="elevated" size="large"
+      <v-btn class="mt-6" prepend-icon="mdi-plus" color="primary" variant="flat" size="large"
         @click="showCreateDialog = true">
         {{ t('list.create') }}
       </v-btn>
@@ -128,7 +128,7 @@
           <v-btn variant="text" @click="closeCreateDialog">
             {{ t('create.cancel') }}
           </v-btn>
-          <v-btn color="primary" variant="elevated" @click="submitForm" :loading="saving">
+          <v-btn color="primary" variant="flat" @click="submitForm" :loading="saving">
             {{ editingKB ? t('edit.submit') : t('create.submit') }}
           </v-btn>
         </v-card-actions>
@@ -179,7 +179,7 @@
           <v-btn variant="text" @click="cancelDelete">
             {{ t('delete.cancel') }}
           </v-btn>
-          <v-btn color="error" variant="elevated" @click="deleteKB" :loading="deleting">
+          <v-btn color="error" variant="flat" @click="deleteKB" :loading="deleting">
             {{ t('delete.confirm') }}
           </v-btn>
         </v-card-actions>
