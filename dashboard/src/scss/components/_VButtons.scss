@@ -71,3 +71,44 @@
 .config-floating-btn--test {
   bottom: 196px;
 }
+
+// Ensure themed buttons use accessible foreground colors in light/dark modes
+.v-theme--PurpleTheme {
+  .v-btn {
+    &.bg-primary,
+    &.bg-secondary,
+    &.bg-success,
+    &.bg-info,
+    &.bg-warning,
+    &.bg-error,
+    &.bg-accent {
+      color: $white !important;
+      box-shadow: none !important;
+
+      .v-btn__content,
+      .v-icon {
+        color: $white !important;
+      }
+    }
+  }
+}
+
+.v-theme--DarkTheme {
+  .v-btn {
+    &.bg-primary,
+    &.bg-secondary,
+    &.bg-success,
+    &.bg-info,
+    &.bg-warning,
+    &.bg-error,
+    &.bg-accent {
+      color: #000 !important;
+      box-shadow: none !important;
+
+      .v-btn__content,
+      .v-icon {
+        color: #000 !important;
+      }
+    }
+  }
+}
