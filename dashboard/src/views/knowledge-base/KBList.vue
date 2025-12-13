@@ -141,11 +141,13 @@
         <v-card-title class="pa-4 emoji-dialog-title">{{ t('emoji.title') }}</v-card-title>
         <v-divider />
         <v-card-text class="pa-4 emoji-dialog-content">
-          <div v-for="category in emojiCategories" :key="category.key" class="mb-4">
-            <p class="text-subtitle-2 mb-2">{{ t(`emoji.categories.${category.key}`) }}</p>
-            <div class="emoji-grid">
-              <div v-for="emoji in category.emojis" :key="emoji" class="emoji-item" @click="selectEmoji(emoji)">
-                {{ emoji }}
+          <div class="emoji-scroll-wrapper">
+            <div v-for="category in emojiCategories" :key="category.key" class="mb-4">
+              <p class="text-subtitle-2 mb-2">{{ t(`emoji.categories.${category.key}`) }}</p>
+              <div class="emoji-grid">
+                <div v-for="emoji in category.emojis" :key="emoji" class="emoji-item" @click="selectEmoji(emoji)">
+                  {{ emoji }}
+                </div>
               </div>
             </div>
           </div>
@@ -578,7 +580,7 @@ onMounted(() => {
 
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, 56px);
   gap: 8px;
 }
 
@@ -601,8 +603,6 @@ onMounted(() => {
 .emoji-dialog-card {
   display: flex;
   flex-direction: column;
-  max-height: 80vh;
-  overflow: hidden;
 }
 
 .emoji-dialog-title,
@@ -611,9 +611,14 @@ onMounted(() => {
 }
 
 .emoji-dialog-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
+}
+
+.emoji-scroll-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: max-content;
 }
 
 /* 响应式设计 */
@@ -627,7 +632,7 @@ onMounted(() => {
   }
 
   .emoji-grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, 48px);
   }
 }
 </style>
