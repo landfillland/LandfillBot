@@ -1,19 +1,16 @@
 <template>
   <v-tooltip :text="tm('market.installPlugin')" location="left">
     <template v-slot:activator="{ props }">
-      <button
+      <v-btn
         v-bind="props"
-        type="button"
-        class="v-btn v-btn--elevated v-btn--icon v-theme--PurpleThemeDark bg-darkprimary v-btn--density-default v-btn--size-x-large v-btn--variant-elevated fab-button"
-        style="position: fixed; right: 52px; bottom: 52px; z-index: 10000; border-radius: 16px;"
+        class="config-floating-btn"
+        variant="flat"
+        icon
+        size="x-large"
         @click="emit('open-install-dialog')"
       >
-        <span class="v-btn__overlay"></span>
-        <span class="v-btn__underlay"></span>
-        <span class="v-btn__content" data-no-activator="">
-          <i class="mdi-plus mdi v-icon notranslate v-theme--PurpleThemeDark v-icon--size-default" aria-hidden="true" style="font-size: 32px;"></i>
-        </span>
-      </button>
+        <v-icon size="32">mdi-plus</v-icon>
+      </v-btn>
     </template>
   </v-tooltip>
 

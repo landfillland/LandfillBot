@@ -39,26 +39,40 @@
 
           <v-tooltip :text="tm('actions.save')" location="left">
             <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-content-save" size="x-large" style="position: fixed; right: 52px; bottom: 52px;"
-                color="darkprimary" @click="updateConfig">
-              </v-btn>
+              <v-btn
+                v-bind="props"
+                class="config-floating-btn config-floating-btn--save"
+                variant="flat"
+                icon="mdi-content-save"
+                size="x-large"
+                @click="updateConfig"
+              ></v-btn>
             </template>
           </v-tooltip>
 
           <v-tooltip :text="tm('codeEditor.title')" location="left">
             <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-code-json" size="x-large" style="position: fixed; right: 52px; bottom: 124px;" color="primary"
-                @click="configToString(); codeEditorDialog = true">
-              </v-btn>
+              <v-btn
+                v-bind="props"
+                class="config-floating-btn config-floating-btn--editor"
+                variant="flat"
+                icon="mdi-code-json"
+                size="x-large"
+                @click="configToString(); codeEditorDialog = true"
+              ></v-btn>
             </template>
           </v-tooltip>
 
           <v-tooltip text="测试当前配置" location="left" v-if="!isSystemConfig">
             <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-chat-processing" size="x-large" 
-                style="position: fixed; right: 52px; bottom: 196px;" color="secondary"
-                @click="openTestChat">
-              </v-btn>
+              <v-btn
+                v-bind="props"
+                class="config-floating-btn config-floating-btn--test"
+                variant="flat"
+                icon="mdi-chat-processing"
+                size="x-large"
+                @click="openTestChat"
+              ></v-btn>
             </template>
           </v-tooltip>
 
