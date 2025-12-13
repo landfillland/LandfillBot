@@ -49,7 +49,7 @@
                     style="background-color: transparent;" :selected="selectedSessions"
                     @update:selected="$emit('selectConversation', $event)">
                     <v-list-item v-for="item in sessions" :key="item.session_id" :value="item.session_id"
-                        rounded="lg" class="conversation-item" active-color="secondary">
+                        rounded="lg" class="conversation-item" color="secondary">
                         <v-list-item-title v-if="!sidebarCollapsed || isMobile" class="conversation-title">
                             {{ item.display_name || tm('conversation.newConversation') }}
                         </v-list-item-title>

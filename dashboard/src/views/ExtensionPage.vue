@@ -851,7 +851,7 @@ watch(marketSearch, (newVal) => {
 
 
           <!-- 已安装插件标签页内容 -->
-          <v-tab-item v-show="activeTab === 'installed'">
+          <div v-show="activeTab === 'installed'">
             <InstalledExtensionsSection
               v-model:isListView="isListView"
               :filtered-plugins="filteredPlugins"
@@ -873,10 +873,10 @@ watch(marketSearch, (newVal) => {
               @update-extension="updateExtension"
               @uninstall="handleUninstall"
             />
-          </v-tab-item>
+          </div>
 
           <!-- 插件市场标签页内容 -->
-          <v-tab-item v-show="activeTab === 'market'">
+          <div v-show="activeTab === 'market'">
             <MarketExtensionsSection
               :filtered-market-plugins="filteredMarketPlugins"
               :paginated-plugins="paginatedPlugins"
@@ -901,7 +901,7 @@ watch(marketSearch, (newVal) => {
               @edit-custom-source="editCustomSource"
               @remove-custom-source="removeCustomSource"
             />
-          </v-tab-item>
+          </div>
 
           <v-row v-if="loading_">
             <v-col cols="12" class="d-flex justify-center">
