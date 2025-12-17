@@ -6,14 +6,42 @@ import ConsoleDisplayer from '@/components/shared/ConsoleDisplayer.vue';
 import ReadmeDialog from '@/components/shared/ReadmeDialog.vue';
 import ProxySelector from '@/components/shared/ProxySelector.vue';
 import UninstallConfirmDialog from '@/components/shared/UninstallConfirmDialog.vue';
+import McpServersSection from '@/components/extension/McpServersSection.vue';
+import ComponentPanel from '@/components/extension/componentPanel/index.vue';
 import axios from 'axios';
 import { pinyin } from 'pinyin-pro';
 import { useCommonStore } from '@/stores/common';
 import { useModuleI18n } from '@/i18n/composables';
+import defaultPluginIcon from '@/assets/images/plugin_icon.png';
+
 import { ref, computed, onMounted, reactive, watch } from 'vue';
 
 const commonStore = useCommonStore();
 const { tm } = useModuleI18n('features/extension');
+// 检查指令冲突并提示
+const conflictDialog = reactive({
+  show: false,
+  count: 0
+});
+const checkAndPromptConflicts = async () => {
+  try {
+    const res = await axios.get('/api/commands');
+    if (res.data.status === 'ok') {
+      const conflicts = res.data.data.summary?.conflicts || 0;
+      if (conflicts > 0) {
+        conflictDialog.count = conflicts;
+        conflictDialog.show = true;
+      }
+    }
+  } catch (err) {
+    console.debug('Failed to check command conflicts:', err);
+  }
+};
+const handleConflictConfirm = () => {
+  activeTab.value = 'commands';
+};
+
+const fileInput = ref(null);
 const activeTab = ref('installed');
 const extension_data = reactive({
   data: [],
@@ -411,7 +439,8 @@ const pluginOn = async (extension) => {
       return;
     }
     toast(res.data.message, 'success');
-    getExtensions();
+    await getExtensions();
+    await checkAndPromptConflicts();
   } catch (err) {
     toast(err, 'error');
   }
@@ -722,6 +751,8 @@ const newExtension = async () => {
         name: res.data.data.name,
         repo: res.data.data.repo || null
       });
+      
+      await checkAndPromptConflicts();
     }).catch((err) => {
       loading_.value = false;
       onLoadingDialogResult(2, err, -1);
@@ -748,6 +779,8 @@ const newExtension = async () => {
           name: res.data.data.name,
           repo: res.data.data.repo || null
         });
+        
+        await checkAndPromptConflicts();
       }).catch((err) => {
         loading_.value = false;
         toast(tm('messages.installFailed') + ' ' + err, 'error');
@@ -828,21 +861,29 @@ watch(marketSearch, (newVal) => {
             <v-tabs v-model="activeTab" color="primary">
               <v-tab value="installed">
                 <v-icon class="mr-2">mdi-puzzle</v-icon>
-                {{ tm('tabs.installed') }}
+                {{ tm('tabs.installedPlugins') }}
+              </v-tab>
+              <v-tab value="mcp">
+                <v-icon class="mr-2">mdi-server-network</v-icon>
+                {{ tm('tabs.installedMcpServers') }}
               </v-tab>
               <v-tab value="market">
                 <v-icon class="mr-2">mdi-store</v-icon>
                 {{ tm('tabs.market') }}
               </v-tab>
+              <v-tab value="components">
+                <v-icon class="mr-2">mdi-wrench</v-icon>
+                {{ tm('tabs.handlersOperation') }}
+              </v-tab>
             </v-tabs>
 
             <!-- 搜索栏 - 在移动端时独占一行 -->
             <div style="flex-grow: 1; min-width: 250px; max-width: 400px; margin-left: auto; margin-top: 8px;">
-              <v-text-field v-if="activeTab == 'market'" v-model="marketSearch" density="compact"
+              <v-text-field v-if="activeTab === 'market'" v-model="marketSearch" density="compact"
                 :label="tm('search.marketPlaceholder')" prepend-inner-icon="mdi-magnify" variant="solo-filled" flat
                 hide-details single-line>
               </v-text-field>
-              <v-text-field v-else v-model="pluginSearch" density="compact" :label="tm('search.placeholder')"
+              <v-text-field v-else-if="activeTab === 'installed'" v-model="pluginSearch" density="compact" :label="tm('search.placeholder')"
                 prepend-inner-icon="mdi-magnify" variant="solo-filled" flat hide-details single-line>
               </v-text-field>
             </div>
@@ -874,6 +915,24 @@ watch(marketSearch, (newVal) => {
               @uninstall="handleUninstall"
             />
           </div>
+
+          <!-- 指令面板标签页内容 -->
+          <v-tab-item v-show="activeTab === 'components'">
+            <v-card class="rounded-lg" variant="flat" style="background-color: transparent;">
+              <v-card-text class="pa-0">
+                <ComponentPanel :active="activeTab === 'components'" />
+              </v-card-text>
+            </v-card>
+          </v-tab-item>
+
+          <!-- 已安装的 MCP 服务器标签页内容 -->
+          <v-tab-item v-show="activeTab === 'mcp'">
+            <v-card class="rounded-lg" variant="flat" style="background-color: transparent;">
+              <v-card-text class="pa-0">
+                <McpServersSection />
+              </v-card-text>
+            </v-card>
+          </v-tab-item>
 
           <!-- 插件市场标签页内容 -->
           <div v-show="activeTab === 'market'">
@@ -1030,6 +1089,34 @@ watch(marketSearch, (newVal) => {
 
   <!-- 卸载插件确认对话框（列表模式用） -->
   <UninstallConfirmDialog v-model="showUninstallDialog" @confirm="handleUninstallConfirm" />
+
+  <!-- 指令冲突提示对话框 -->
+  <v-dialog v-model="conflictDialog.show" max-width="420">
+    <v-card class="rounded-lg">
+      <v-card-title class="d-flex align-center pa-4">
+        <v-icon color="warning" class="mr-2">mdi-alert-circle</v-icon>
+        {{ tm('conflicts.title') }}
+      </v-card-title>
+      <v-card-text class="px-4 pb-2">
+        <div class="d-flex align-center mb-3">
+          <v-chip color="warning" variant="tonal" size="large" class="font-weight-bold">
+            {{ conflictDialog.count }}
+          </v-chip>
+          <span class="ml-2 text-body-1">{{ tm('conflicts.pairs') }}</span>
+        </div>
+        <p class="text-body-2" style="color: rgba(var(--v-theme-on-surface), 0.7);">
+          {{ tm('conflicts.message') }}
+        </p>
+      </v-card-text>
+      <v-card-actions class="pa-4 pt-2">
+        <v-spacer></v-spacer>
+        <v-btn variant="text" @click="conflictDialog.show = false">{{ tm('conflicts.later') }}</v-btn>
+        <v-btn color="warning" variant="flat" @click="handleConflictConfirm">
+          {{ tm('conflicts.goToManage') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 
   <!-- 危险插件确认对话框 -->
   <v-dialog v-model="dangerConfirmDialog" width="500" persistent>
