@@ -5,6 +5,7 @@ import { useI18n } from '@/i18n/composables';
 import sidebarItems from './sidebarItem';
 import NavItem from './NavItem.vue';
 import { applySidebarCustomization } from '@/utils/sidebarCustomization';
+import ChangelogDialog from '@/components/shared/ChangelogDialog.vue';
 
 const { t } = useI18n();
 
@@ -24,7 +25,7 @@ const handleCustomEvent = () => {
 
 onMounted(() => {
   sidebarMenu.value = applySidebarCustomization(sidebarItems);
-  
+   
   window.addEventListener('storage', handleStorageChange);
   window.addEventListener('sidebar-customization-changed', handleCustomEvent);
 });
@@ -36,6 +37,9 @@ onUnmounted(() => {
 
 const showIframe = ref(false);
 const starCount = ref(null);
+
+// 更新日志对话框
+const changelogDialog = ref(false);
 
 const sidebarWidth = ref(235);
 const minSidebarWidth = 200;
@@ -177,18 +181,18 @@ function startSidebarResize(event) {
   isResizing.value = true;
   document.body.style.userSelect = 'none';
   document.body.style.cursor = 'ew-resize';
-  
+   
   const startX = event.clientX;
   const startWidth = sidebarWidth.value;
-  
+   
   function onMouseMoveResize(event) {
     if (!isResizing.value) return;
-    
+     
     const deltaX = event.clientX - startX;
     const newWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, startWidth + deltaX));
     sidebarWidth.value = newWidth;
   }
-  
+   
   function onMouseUpResize() {
     isResizing.value = false;
     document.body.style.userSelect = '';
@@ -196,7 +200,7 @@ function startSidebarResize(event) {
     document.removeEventListener('mousemove', onMouseMoveResize);
     document.removeEventListener('mouseup', onMouseUpResize);
   }
-  
+   
   document.addEventListener('mousemove', onMouseMoveResize);
   document.addEventListener('mouseup', onMouseUpResize);
 }
@@ -219,6 +223,11 @@ async function fetchStarCount() {
 }
 
 fetchStarCount();
+
+// 打开更新日志对话框
+function openChangelogDialog() {
+  changelogDialog.value = true;
+}
 
 </script>
 
@@ -250,6 +259,17 @@ fetchStarCount();
         >
           {{ t('core.navigation.settings') }}
         </v-btn>
+        
+        <v-btn
+          class="sidebar-action-btn"
+          size="small"
+          variant="text"
+          prepend-icon="mdi-history"
+          @click="openChangelogDialog"
+        >
+          {{ t('core.navigation.changelog') }}
+        </v-btn>
+
         <v-btn
           class="sidebar-action-btn"
           size="small"
@@ -259,6 +279,7 @@ fetchStarCount();
         >
           {{ t('core.navigation.documentation') }}
         </v-btn>
+
         <v-btn
           class="sidebar-action-btn"
           size="small"
@@ -277,7 +298,7 @@ fetchStarCount();
         </v-btn>
       </div>
     </div>
-    
+     
     <div 
       v-if="!customizer.mini_sidebar && customizer.Sidebar_drawer"
       class="sidebar-resize-handle"
@@ -286,7 +307,7 @@ fetchStarCount();
     >
     </div>
   </v-navigation-drawer>
-  
+   
   <div
     v-if="showIframe"
     id="draggable-iframe"
@@ -320,8 +341,10 @@ fetchStarCount();
     <iframe
       src="https://docs.astrbot.app"
       style="width: 100%; height: calc(100% - 56px); border: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;"
-    ></iframe>
+      ></iframe>
   </div>
+
+  <ChangelogDialog v-model="changelogDialog" />
 </template>
 
 <style scoped>

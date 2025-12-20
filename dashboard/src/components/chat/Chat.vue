@@ -34,13 +34,23 @@
 
                     <div class="message-list-wrapper" v-if="messages && messages.length > 0">
                         <MessageList :messages="messages" :isDark="isDark"
-                            :isStreaming="isStreaming || isConvRunning" @openImagePreview="openImagePreview"
+                            :isStreaming="isStreaming || isConvRunning" 
+                            :isLoadingMessages="isLoadingMessages"
+                            @openImagePreview="openImagePreview"
                             @replyMessage="handleReplyMessage"
                             ref="messageList" />
                         <div class="message-list-fade" :class="{ 'fade-dark': isDark }"></div>
                     </div>
                     <div class="welcome-container fade-in" v-else>
-                        <div class="welcome-title">
+                        <div v-if="isLoadingMessages" class="loading-overlay-welcome">
+                            <v-progress-circular
+                                indeterminate
+                                size="48"
+                                width="4"
+                                color="primary"
+                            ></v-progress-circular>
+                        </div>
+                        <div v-else class="welcome-title">
                             <span>Hello, I'm</span>
                             <span class="bot-name">
                                 AstrBot
@@ -142,6 +152,7 @@ const isMobile = ref(false);
 const mobileMenuOpen = ref(false);
 const imagePreviewDialog = ref(false);
 const previewImageUrl = ref('');
+const isLoadingMessages = ref(false);
 
 // 使用 composables
 const {
@@ -298,7 +309,14 @@ async function handleSelectConversation(sessionIds: string[]) {
     // 清除引用状态
     clearReply();
     
-    await getSessionMsg(sessionIds[0], router);
+    // 开始加载消息
+    isLoadingMessages.value = true;
+    
+    try {
+        await getSessionMsg(sessionIds[0], router);
+    } finally {
+        isLoadingMessages.value = false;
+    }
     
     nextTick(() => {
         messageList.value?.scrollToBottom();
@@ -543,11 +561,18 @@ onBeforeUnmount(() => {
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    position: relative;
 }
 
 .welcome-title {
     font-size: 28px;
     margin-bottom: 16px;
+}
+
+.loading-overlay-welcome {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .bot-name {
