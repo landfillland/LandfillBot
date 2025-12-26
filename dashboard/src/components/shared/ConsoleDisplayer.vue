@@ -99,7 +99,7 @@ export default {
       }
 
       console.log(`正在连接日志流... (尝试次数: ${this.retryAttempts})`);
-      this.eventSource = new EventSource('/api/live-log');
+      this.eventSource = new EventSource('/api/live-log', { withCredentials: true });
 
       this.eventSource.onopen = () => {
         console.log('日志流连接成功！');
