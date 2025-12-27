@@ -1,3 +1,5 @@
+// To Do: 这个文件该解耦了。
+
 <script setup>
 import InstalledExtensionsSection from '@/components/extension/InstalledExtensionsSection.vue';
 import MarketExtensionsSection from '@/components/extension/MarketExtensionsSection.vue';
@@ -12,7 +14,6 @@ import axios from 'axios';
 import { pinyin } from 'pinyin-pro';
 import { useCommonStore } from '@/stores/common';
 import { useModuleI18n } from '@/i18n/composables';
-import defaultPluginIcon from '@/assets/images/plugin_icon.png';
 
 import { ref, computed, onMounted, reactive, watch } from 'vue';
 
