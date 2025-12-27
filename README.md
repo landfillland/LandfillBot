@@ -1,3 +1,9 @@
+# 推特来的别来了，这只是一个 Fork 仓库。机器人肯定搞错了：
+
+<img width="751" height="534" alt="image" src="https://github.com/user-attachments/assets/adb63ca4-5f14-4a8e-a90d-77fcdb575092" />
+
+---
+
 ![AstrBot-Logo-Simplified](https://github.com/user-attachments/assets/ffd99b6b-3272-4682-beaa-6fe74250f7d9)
 
 <div align="center">
