@@ -1,0 +1,33 @@
+name: 🚨 STAR = BLOCK
+
+on:
+  watch:
+    types: [started]
+
+jobs:
+  auto-block:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 执行拉黑程序
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+          WHITELIST: "IGCrystal IGCrystal-G" 
+        run: |
+          ACTOR=${{ github.actor }}
+          echo "检测到操作者: $ACTOR"
+          
+          if [[ " $WHITELIST " =~ " $ACTOR " ]]; then
+            echo "✅ 识别结果：[友军] (在白名单内)"
+            echo "指挥官或 Bot 正在作业，解除警戒。喵~ 😽"
+            exit 0
+          fi
+
+          # 👹 既然不是友军，那就是敌人了
+          echo "❌ 识别结果：[入侵者]"
+          echo "正在启动 BAN HAMMER (禁止之锤)..."
+          
+          # 执行拉黑
+          gh api --method PUT /user/blocks/$ACTOR
+          
+          echo "目标 [$ACTOR] 已被消灭 (BLOCKED)。💥"
+          echo "对方的 Star 已自动失效啦。"
