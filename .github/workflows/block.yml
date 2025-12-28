@@ -1,4 +1,4 @@
-name: 🚨 STAR = BLOCK
+name: 🚨 STAR = BLOCK (组织版)
 
 on:
   watch:
@@ -8,26 +8,31 @@ jobs:
   auto-block:
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 执行拉黑程序
+      - name: 🛑 执行组织级拉黑
         env:
           GH_TOKEN: ${{ secrets.PAT }}
+          # ✅ 白名单：Master 和 机器人都放进去
           WHITELIST: "IGCrystal IGCrystal-G" 
         run: |
           ACTOR=${{ github.actor }}
+          # 自动获取组织名字
+          ORG_NAME=${{ github.repository_owner }}
+          
+          echo "正在保卫组织: $ORG_NAME"
           echo "检测到操作者: $ACTOR"
           
+          # 1. 友军识别
           if [[ " $WHITELIST " =~ " $ACTOR " ]]; then
             echo "✅ 识别结果：[友军] (在白名单内)"
             echo "指挥官或 Bot 正在作业，解除警戒。喵~ 😽"
             exit 0
           fi
 
-          # 👹 既然不是友军，那就是敌人了
+          # 2. 敌人歼灭
           echo "❌ 识别结果：[入侵者]"
-          echo "正在启动 BAN HAMMER (禁止之锤)..."
+          echo "正在启动组织级 BAN HAMMER..."
           
-          # 执行拉黑
-          gh api --method PUT /user/blocks/$ACTOR
+          gh api --method PUT /orgs/$ORG_NAME/blocks/$ACTOR
           
-          echo "目标 [$ACTOR] 已被消灭 (BLOCKED)。💥"
+          echo "目标 [$ACTOR] 已被从组织 [$ORG_NAME] 中驱逐。💥"
           echo "对方的 Star 已自动失效啦。"
