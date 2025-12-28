@@ -2,27 +2,22 @@
 
 ![LandfillBot](https://placehold.co/1000x200/333333/FF0000/png?text=LandfillBot&font=playfair+display)
 
-<br/>
-
-<img src="https://img.shields.io/badge/Twitter_Bot-机器人肯定搞错了-critical?style=for-the-badge&logo=twitter&logoColor=white" height="28">
+<img src="https://img.shields.io/badge/WARNING-这不是官方仓库-critical?style=for-the-badge&logo=x&logoColor=white" height="28">
 <img src="https://img.shields.io/badge/WARNING-已经点过_star_的将会被_BLOCK-black?style=for-the-badge&logo=github" height="28">
 
-<br/><br/>
-
-<h3>🛑 推特来的别来了，这只是一个 Fork 仓库。 🛑</h3>
-
+<br/>
 <br/>
 
-<img src="https://github.com/user-attachments/assets/adb63ca4-5f14-4a8e-a90d-77fcdb575092" width="450" style="border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);">
+| 🛑 WARNING | 📸 EVIDENCE |
+| :---: | :---: |
+| <h3> 推特来的别来了，<br>这只是一个 Fork 仓库。</h3> | <img src="https://github.com/user-attachments/assets/adb63ca4-5f14-4a8e-a90d-77fcdb575092" width="450"> |
 
-<br/><br/>
 
 </div>
 
 
 ---
 
-<br/><br/>
 
 原 AstrBot 内容部分:
 
