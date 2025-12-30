@@ -130,8 +130,8 @@ export default {
   color: var(--card-text);
 }
 
-.stat-item-card ::v-deep .v-card-title, 
-.stat-item-card ::v-deep .v-card-actions { 
+.stat-item-card :deep(.v-card-title), 
+.stat-item-card :deep(.v-card-actions) { 
   display: none; 
 }
 </style>
