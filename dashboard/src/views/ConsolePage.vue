@@ -33,7 +33,7 @@ const { tm } = useModuleI18n('features/console');
               <v-text-field v-model="pipInstallPayload.mirror" :label="tm('pipInstall.mirrorLabel')" variant="outlined"></v-text-field>
               <small>{{ tm('pipInstall.mirrorHint') }}</small>
               <div>
-                <small>{{ status }}</small>
+                <small>{{ pipStatus }}</small>
               </div>
               
             </v-card-text>
@@ -65,7 +65,7 @@ export default {
         mirror: ''
       },
       loading: false,
-      status: ''
+      pipStatus: ''
     }
   },
   watch: {
@@ -79,16 +79,16 @@ export default {
     pipInstall() {
       this.loading = true;
       axios.post('/api/update/pip-install', this.pipInstallPayload)
-        .then(res => {
-          this.status = res.data.message;
+          .then(res => {
+          this.pipStatus = res.data.message;
           setTimeout(() => {
-            this.status = '';
+            this.pipStatus = '';
             this.pipDialog = false;
           }, 2000);
-        })
-        .catch(err => {
-          this.status = err.response.data.message;
-        }).finally(() => {
+          })
+          .catch(err => {
+          this.pipStatus = err.response.data.message;
+          }).finally(() => {
           this.loading = false;
         });
     }
