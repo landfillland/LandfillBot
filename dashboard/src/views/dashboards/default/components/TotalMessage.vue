@@ -1,31 +1,33 @@
 <template>
-  <v-card elevation="1" class="stat-card message-card">
-    <v-card-text>
+  <item-card :item="stat" class="stat-card message-card stat-item-card" :hide-header="true">
+    <template #item-details="{ item }">
       <div class="d-flex align-start">
         <div class="icon-wrapper">
           <v-icon icon="mdi-message-text-outline" size="24"></v-icon>
         </div>
-        
+
         <div class="stat-content">
           <div class="stat-title">{{ t('stats.totalMessage.title') }}</div>
           <div class="stat-value-wrapper">
             <h2 class="stat-value">{{ formattedCount }}</h2>
-            <v-chip v-if="stat.daily_increase" class="trend-chip" size="x-small" color="success">
+            <v-chip v-if="stat.daily_increase" class="trend-chip" size="x-small" color="success" variant="flat">
               +{{ stat.daily_increase }}
             </v-chip>
           </div>
           <div class="stat-subtitle">{{ t('stats.totalMessage.subtitle') }}</div>
         </div>
       </div>
-    </v-card-text>
-  </v-card>
+    </template>
+  </item-card>
 </template>
 
 <script>
 import { useModuleI18n } from '@/i18n/composables';
+import ItemCard from '@/components/shared/ItemCard.vue';
 
 export default {
   name: 'TotalMessage',
+  components: { ItemCard },
   props: ['stat'],
   setup() {
     const { tm: t } = useModuleI18n('features/dashboard');
@@ -53,8 +55,13 @@ export default {
 }
 
 .message-card {
-  background-color: #5e35b1;
-  color: white;
+  border: 5px solid rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-primary));
+}
+
+.stat-item-card ::v-deep .v-card-title,
+.stat-item-card ::v-deep .v-card-actions {
+  display: none;
 }
 
 .icon-wrapper {
@@ -65,7 +72,8 @@ export default {
   height: 48px;
   border-radius: 8px;
   margin-right: 16px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
 }
 
 .stat-content {
