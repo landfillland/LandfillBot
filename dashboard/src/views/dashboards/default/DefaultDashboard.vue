@@ -52,7 +52,7 @@
       </v-col>
     </v-row>
     <div class="dashboard-footer">
-      <v-chip size="small" color="primary" variant="flat" prepend-icon="mdi-refresh">
+      <v-chip size="small" color="primary" variant="flat" theme="dark">
         {{ t('lastUpdate') }}: {{ lastUpdated }}
       </v-chip>
       <v-btn 
