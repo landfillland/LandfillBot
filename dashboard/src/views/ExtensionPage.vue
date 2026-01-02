@@ -37,7 +37,9 @@ const conflictDialog = reactive({
 });
 const checkAndPromptConflicts = async () => {
   try {
-    const res = await axios.get('/api/commands');
+    const res = await axios.get<
+      ApiResponse<{ summary?: { conflicts?: number } }>
+    >('/api/commands');
     if (res.data.status === 'ok') {
       const conflicts = res.data.data.summary?.conflicts || 0;
       if (conflicts > 0) {
@@ -65,7 +67,10 @@ const snack_message = ref('');
 const snack_show = ref(false);
 const snack_success = ref<ToastColor>('success');
 const configDialog = ref(false);
-const extension_config = reactive({
+const extension_config = reactive<{
+  metadata: Record<string, unknown>;
+  config: Record<string, unknown>;
+}>({
   metadata: {},
   config: {}
 });
@@ -119,8 +124,8 @@ const originalSourceUrl = ref('');
 
 const extension_url = ref('');
 const dialog = ref(false);
-const upload_file = ref(null);
-const uploadTab = ref('file');
+const upload_file = ref<File | null>(null);
+const uploadTab = ref<'file' | 'url'>('file');
 const showPluginFullName = ref(false);
 const marketSearch = ref('');
 const debouncedMarketSearch = ref('');
@@ -265,22 +270,24 @@ const toggleShowReserved = () => {
   showReserved.value = !showReserved.value;
 };
 
+const normalizeMessage = (message: unknown): string => {
+  if (typeof message === 'string') return message;
+  if (message instanceof Error) return message.message;
+
+  if (typeof message === 'object' && message !== null && 'message' in message) {
+    const maybeMessage = (message as { message?: unknown }).message;
+    if (typeof maybeMessage === 'string') return maybeMessage;
+  }
+
+  try {
+    return String(message);
+  } catch {
+    return JSON.stringify(message);
+  }
+};
+
 const toast = (message: unknown, success: ToastColor, timeToClose?: number) => {
-  const normalized = (() => {
-    if (typeof message === 'string') return message;
-    if (message instanceof Error) return message.message;
-
-    if (typeof message === 'object' && message !== null && 'message' in message) {
-      const maybeMessage = (message as { message?: unknown }).message;
-      if (typeof maybeMessage === 'string') return maybeMessage;
-    }
-
-    try {
-      return String(message);
-    } catch {
-      return JSON.stringify(message);
-    }
-  })();
+  const normalized = normalizeMessage(message);
 
   snack_message.value = normalized;
   snack_show.value = true;
@@ -300,9 +307,9 @@ const resetLoadingDialog = () => {
   loadingDialog.result = '';
 };
 
-const onLoadingDialogResult = (statusCode: number, result: string, timeToClose = 2000) => {
+const onLoadingDialogResult = (statusCode: number, result: unknown, timeToClose = 2000) => {
   loadingDialog.statusCode = statusCode;
-  loadingDialog.result = result;
+  loadingDialog.result = normalizeMessage(result);
   if (timeToClose === -1) return;
   setTimeout(resetLoadingDialog, timeToClose);
 };
@@ -376,7 +383,7 @@ const uninstallExtension = async (
 
   toast(tm('messages.uninstalling') + ' ' + extension_name, 'primary');
   try {
-    const res = await axios.post('/api/plugin/uninstall', {
+    const res = await axios.post<ApiResponse<InstalledPlugin[]>>('/api/plugin/uninstall', {
       name: extension_name,
       delete_config: deleteConfig,
       delete_data: deleteData
@@ -393,12 +400,13 @@ const uninstallExtension = async (
   }
 };
 
-const handleUninstall = ({ extension, options }) => {
+const handleUninstall = (payload: { extension: InstalledPlugin; options?: UninstallOptions }) => {
+  const { extension, options } = payload;
   if (!extension) return;
   uninstallExtension(extension.name, options ?? false);
 };
 
-const handleUninstallConfirm = (options) => {
+const handleUninstallConfirm = (options: UninstallOptions) => {
   if (pluginToUninstall.value) {
     uninstallExtension(pluginToUninstall.value, options);
     pluginToUninstall.value = null;
@@ -409,7 +417,7 @@ const updateExtension = async (extension_name: string) => {
   loadingDialog.title = tm('status.loading');
   loadingDialog.show = true;
   try {
-    const res = await axios.post('/api/plugin/update', {
+    const res = await axios.post<ApiResponse<InstalledPlugin[]>>('/api/plugin/update', {
       name: extension_name,
       proxy: localStorage.getItem('selectedGitHubProxy') || ''
     });
@@ -446,7 +454,8 @@ const updateAllExtensions = async () => {
 
   const targets = updatableExtensions.value.map(ext => ext.name);
   try {
-    const res = await axios.post('/api/plugin/update-all', {
+    type UpdateAllResult = { name: string; status: 'ok' | 'error'; message?: string };
+    const res = await axios.post<ApiResponse<{ results?: UpdateAllResult[] }>>('/api/plugin/update-all', {
       names: targets,
       proxy: localStorage.getItem('selectedGitHubProxy') || ''
     });
@@ -486,9 +495,9 @@ const updateAllExtensions = async () => {
   }
 };
 
-const pluginOn = async (extension) => {
+const pluginOn = async (extension: InstalledPlugin) => {
   try {
-    const res = await axios.post('/api/plugin/on', { name: extension.name });
+    const res = await axios.post<ApiResponse<unknown>>('/api/plugin/on', { name: extension.name });
     if (res.data.status === 'error') {
       toast(res.data.message, 'error');
       return;
@@ -501,9 +510,9 @@ const pluginOn = async (extension) => {
   }
 };
 
-const pluginOff = async (extension) => {
+const pluginOff = async (extension: InstalledPlugin) => {
   try {
-    const res = await axios.post('/api/plugin/off', { name: extension.name });
+    const res = await axios.post<ApiResponse<unknown>>('/api/plugin/off', { name: extension.name });
     if (res.data.status === 'error') {
       toast(res.data.message, 'error');
       return;
@@ -515,13 +524,15 @@ const pluginOff = async (extension) => {
   }
 };
 
-const openExtensionConfig = async (extension_name) => {
+const openExtensionConfig = async (extension_name: string) => {
   curr_namespace.value = extension_name;
   configDialog.value = true;
   try {
-    const res = await axios.get('/api/config/get?plugin_name=' + extension_name);
-    extension_config.metadata = res.data.data.metadata;
-    extension_config.config = res.data.data.config;
+    const res = await axios.get<
+      ApiResponse<{ metadata: Record<string, unknown>; config: Record<string, unknown> }>
+    >('/api/config/get?plugin_name=' + extension_name);
+    extension_config.metadata = res.data.data.metadata ?? {};
+    extension_config.config = res.data.data.config ?? {};
   } catch (err) {
     toast(err, 'error');
   }
@@ -529,7 +540,10 @@ const openExtensionConfig = async (extension_name) => {
 
 const updateConfig = async () => {
   try {
-    const res = await axios.post('/api/config/plugin/update?plugin_name=' + curr_namespace.value, extension_config.config);
+    const res = await axios.post<ApiResponse<unknown>>(
+      '/api/config/plugin/update?plugin_name=' + curr_namespace.value,
+      extension_config.config
+    );
     if (res.data.status === 'ok') {
       toast(res.data.message, 'success');
     } else {
@@ -544,14 +558,17 @@ const updateConfig = async () => {
   }
 };
 
-const showPluginInfo = (plugin) => {
-  selectedPlugin.value = plugin;
+const showPluginInfo = (plugin: InstalledPlugin) => {
+  selectedPlugin.value = {
+    ...plugin,
+    handlers: plugin.handlers ?? []
+  };
   showPluginInfoDialog.value = true;
 };
 
-const reloadPlugin = async (plugin_name) => {
+const reloadPlugin = async (plugin_name: string) => {
   try {
-    const res = await axios.post('/api/plugin/reload', { name: plugin_name });
+    const res = await axios.post<ApiResponse<unknown>>('/api/plugin/reload', { name: plugin_name });
     if (res.data.status === 'error') {
       toast(res.data.message, 'error');
       return;
@@ -563,13 +580,13 @@ const reloadPlugin = async (plugin_name) => {
   }
 };
 
-const viewReadme = (plugin) => {
+const viewReadme = (plugin: { name: string; repo?: string | null }) => {
   readmeDialog.pluginName = plugin.name;
   readmeDialog.repoUrl = plugin.repo;
   readmeDialog.show = true;
 };
 
-const handleInstallPlugin = async (plugin) => {
+const handleInstallPlugin = async (plugin: PluginMarketItem) => {
   if (plugin.tags && plugin.tags.includes('danger')) {
     selectedDangerPlugin.value = plugin;
     dangerConfirmDialog.value = true;
@@ -597,7 +614,7 @@ const cancelDangerInstall = () => {
 
 const loadCustomSources = async () => {
   try {
-    const res = await axios.get('/api/plugin/source/get');
+    const res = await axios.get<ApiResponse<PluginSource[]>>('/api/plugin/source/get');
     if (res.data.status === 'ok') {
       customSources.value = res.data.data;
     } else {
@@ -616,7 +633,7 @@ const loadCustomSources = async () => {
 
 const saveCustomSources = async () => {
   try {
-    const res = await axios.post('/api/plugin/source/save', {
+    const res = await axios.post<ApiResponse<unknown>>('/api/plugin/source/save', {
       sources: customSources.value
     });
     if (res.data.status !== 'ok') {
@@ -803,11 +820,12 @@ const newExtension = async () => {
   loading_.value = true;
   loadingDialog.title = tm('status.loading');
   loadingDialog.show = true;
+  type InstallResult = { name: string; repo?: string | null };
   if (upload_file.value !== null) {
     toast(tm('messages.installing'), 'primary');
     const formData = new FormData();
     formData.append('file', upload_file.value);
-    axios.post('/api/plugin/install-upload', formData, {
+    axios.post<ApiResponse<InstallResult>>('/api/plugin/install-upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -834,7 +852,7 @@ const newExtension = async () => {
     });
   } else {
     toast(tm('messages.installingFromUrl') + ' ' + extension_url.value, 'primary');
-    axios.post('/api/plugin/install',
+    axios.post<ApiResponse<InstallResult>>('/api/plugin/install',
       {
         url: extension_url.value,
         proxy: localStorage.getItem('selectedGitHubProxy') || ''
