@@ -101,8 +101,8 @@
                                         <span class="reasoning-label">{{ tm('reasoning.thinking') }}</span>
                                     </div>
                                     <div v-if="isReasoningExpanded(index)" class="reasoning-content">
-                                        <MarkdownRender :content="msg.content.reasoning"
-                                            class="reasoning-text markdown-content" :typewriter="false"
+                                        <MarkdownContent :content="msg.content.reasoning"
+                                            class="reasoning-text" :typewriter="false" :preprocess-badges="false"
                                             :style="isDark ? { opacity: '0.85' } : {}" :is-dark="isDark" />
                                     </div>
                                 </div>
@@ -168,10 +168,13 @@
                                         </div>
                                     </div>
 
-                                    <!-- Text (Markdown) -->
-                                    <MarkdownRender v-else-if="part.type === 'plain' && part.text && part.text.trim()"
-                                        :content="part.text" :typewriter="false" class="markdown-content"
-                                        :is-dark="isDark" :monacoOptions="{ theme: isDark ? 'vs-dark' : 'vs-light' }" />
+                                    <!-- Text (Markdown / Plain multi-line logs) -->
+                                    <template v-else-if="part.type === 'plain' && part.text && part.text.trim()">
+                                        <pre v-if="shouldRenderAsPlainPre(part.text)" class="bot-plain-pre">{{ part.text }}</pre>
+                                        <MarkdownContent v-else
+                                            :content="part.text" :typewriter="false" :preprocess-badges="false"
+                                            :is-dark="isDark" />
+                                    </template>
 
                                     <!-- Image -->
                                     <div v-else-if="part.type === 'image' && part.embedded_url" class="embedded-images">
@@ -280,19 +283,13 @@
 <script lang="ts">
 import type { PropType } from 'vue'
 import { useI18n, useModuleI18n } from '@/i18n/composables';
-import { MarkdownRender, enableKatex, enableMermaid } from 'markstream-vue'
-import 'markstream-vue/index.css'
-import 'katex/dist/katex.min.css'
-import 'highlight.js/styles/github.css';
 import axios from 'axios';
-
-enableKatex();
-enableMermaid();
+import MarkdownContent from '@/components/shared/MarkdownContent.vue';
 
 export default {
     name: 'MessageList',
     components: {
-        MarkdownRender
+        MarkdownContent
     },
     props: {
         messages: {
@@ -319,7 +316,7 @@ export default {
 
         return {
             t,
-            tm
+            tm,
         };
     },
     data() {
@@ -350,6 +347,27 @@ export default {
         }
     },
     methods: {
+        shouldRenderAsPlainPre(text: string): boolean {
+            const trimmed = (text ?? '').trim();
+            if (!trimmed.includes('\n')) return false;
+
+            const lines = trimmed
+                .split(/\r?\n/)
+                .map(l => l.trim())
+                .filter(Boolean);
+
+            if (lines.length < 3) return false;
+
+            const cmdLines = lines.filter(l => l.startsWith('/')).length;
+            const logLines = lines.filter(l => /^\[\d{2}:\d{2}:\d{2}\]/.test(l) || /^\[\d{4}-\d{2}-\d{2}/.test(l)).length;
+            const hasBuiltinHeader = lines.some(l => /内置指令|Built-?in\s+commands/i.test(l));
+
+            if (hasBuiltinHeader && cmdLines >= 2) return true;
+            if (cmdLines >= Math.max(5, Math.floor(lines.length * 0.5))) return true;
+            if (logLines >= 1 && lines.length >= 3) return true;
+            return false;
+        },
+
         getMessageContainerEl(): HTMLElement | null {
             const containerRef: any = this.$refs.messageContainer;
             return (containerRef?.$el ?? containerRef) as HTMLElement | null;
@@ -1437,6 +1455,13 @@ export default {
     max-height: 200px;
     overflow-y: auto;
     margin: 0;
+}
+
+.bot-plain-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: inherit;
 }
 
 .detail-result {

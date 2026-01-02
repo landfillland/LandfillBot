@@ -105,7 +105,7 @@ const attrs = useAttrs();
             </template>
 
             <v-list>
-              <v-list-item @click="viewReadme">
+              <v-list-item v-if="extension?.repo" @click="viewReadme">
                 <v-list-item-title>📄 {{ tm('buttons.viewDocs') }}</v-list-item-title>
               </v-list-item>
 
@@ -207,7 +207,7 @@ const attrs = useAttrs();
     </v-card-text>
 
     <v-card-actions class="extension-actions">
-      <v-btn color="primary" size="small" @click="viewReadme">
+      <v-btn color="primary" size="small" :disabled="!extension?.repo" @click="viewReadme">
         {{ tm('buttons.viewDocs') }}
       </v-btn>
       <v-btn v-if="!marketMode" color="primary"  size="small" @click="configure">

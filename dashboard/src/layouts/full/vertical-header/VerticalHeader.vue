@@ -6,10 +6,7 @@ import Logo from '@/components/shared/Logo.vue';
 import { md5 } from 'js-md5';
 import { useAuthStore } from '@/stores/auth';
 import { useCommonStore } from '@/stores/common';
-import { MarkdownRender, enableKatex, enableMermaid } from 'markstream-vue';
-import 'markstream-vue/index.css';
-import 'katex/dist/katex.min.css';
-import 'highlight.js/styles/github.css';
+import MarkdownContent from '@/components/shared/MarkdownContent.vue';
 import { useI18n } from '@/i18n/composables';
 import { router } from '@/router';
 import { useRoute } from 'vue-router';
@@ -19,8 +16,6 @@ import { useLanguageSwitcher } from '@/i18n/composables';
 import type { Locale } from '@/i18n/types';
 import AboutPage from '@/views/AboutPage.vue';
 
-enableKatex();
-enableMermaid();
 
 const customizer = useCustomizerStore();
 const theme = useTheme();
@@ -556,7 +551,7 @@ const changeLanguage = async (langCode: string) => {
 
             <div v-if="releaseMessage"
               style="background-color: #646cff24; padding: 16px; border-radius: 10px; font-size: 14px; max-height: 400px; overflow-y: auto;">
-              <MarkdownRender :content="releaseMessage" :typewriter="false" class="markdown-content" />
+              <MarkdownContent :content="releaseMessage" :typewriter="false" />
             </div>
 
             <div class="mb-4 mt-4">
@@ -666,7 +661,7 @@ const changeLanguage = async (langCode: string) => {
         </v-card-title>
         <v-card-text
           style="font-size: 14px; max-height: 400px; overflow-y: auto;">
-          <MarkdownRender :content="selectedReleaseNotes" :typewriter="false" class="markdown-content" />
+          <MarkdownContent :content="selectedReleaseNotes" :typewriter="false" />
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -746,22 +741,6 @@ const changeLanguage = async (langCode: string) => {
 </template>
 
 <style>
-.markdown-content h1 {
-  font-size: 1.3em;
-}
-
-.markdown-content ol {
-  padding-left: 24px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-}
-
-.markdown-content ul {
-  padding-left: 24px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-}
-
 .account-dialog .v-card-text {
   padding-top: 24px;
   padding-bottom: 24px;

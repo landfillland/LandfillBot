@@ -5,7 +5,6 @@ import InstalledExtensionsSection from '@/components/extension/InstalledExtensio
 import MarketExtensionsSection from '@/components/extension/MarketExtensionsSection.vue';
 import AstrBotConfig from '@/components/shared/AstrBotConfig.vue';
 import ConsoleDisplayer from '@/components/shared/ConsoleDisplayer.vue';
-import ReadmeDialog from '@/components/shared/ReadmeDialog.vue';
 import ProxySelector from '@/components/shared/ProxySelector.vue';
 import UninstallConfirmDialog from '@/components/shared/UninstallConfirmDialog.vue';
 import McpServersSection from '@/components/extension/McpServersSection.vue';
@@ -87,11 +86,22 @@ const selectedPlugin = ref<SelectedPlugin>({ name: '', handlers: [] });
 const curr_namespace = ref('');
 const updatingAll = ref(false);
 
-const readmeDialog = reactive({
-  show: false,
-  pluginName: '',
-  repoUrl: null
-});
+function toReadmeUrl(repo?: string | null): string | null {
+  const raw = (repo ?? '').trim();
+  if (!raw) return null;
+
+  // Support common git ssh form: git@github.com:owner/repo(.git)
+  const sshMatch = raw.match(/^git@([^:]+):(.+)$/i);
+  let url = sshMatch ? `https://${sshMatch[1]}/${sshMatch[2]}` : raw;
+
+  url = url.replace(/\.git$/i, '').replace(/\/+$/g, '');
+  if (!/^https?:\/\//i.test(url)) return null;
+
+  if (!url.includes('#') && !/\/(blob|tree)\//i.test(url)) {
+    url += '#readme';
+  }
+  return url;
+}
 
 const getInitialListViewMode = () => {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -581,9 +591,9 @@ const reloadPlugin = async (plugin_name: string) => {
 };
 
 const viewReadme = (plugin: { name: string; repo?: string | null }) => {
-  readmeDialog.pluginName = plugin.name;
-  readmeDialog.repoUrl = plugin.repo;
-  readmeDialog.show = true;
+  const url = toReadmeUrl(plugin.repo ?? null);
+  if (!url) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 const handleInstallPlugin = async (plugin: PluginMarketItem) => {
@@ -1185,9 +1195,6 @@ watch(isListView, (newVal) => {
   <v-snackbar :timeout="2000" elevation="24" :color="snack_success" v-model="snack_show">
     {{ snack_message }}
   </v-snackbar>
-
-  <ReadmeDialog v-model:show="readmeDialog.show" :plugin-name="readmeDialog.pluginName"
-    :repo-url="readmeDialog.repoUrl" />
 
   <!-- 卸载插件确认对话框（列表模式用） -->
   <UninstallConfirmDialog v-model="showUninstallDialog" @confirm="handleUninstallConfirm" />
