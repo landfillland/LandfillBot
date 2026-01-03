@@ -161,7 +161,19 @@
     </div>
 
     <v-row style="min-height: 26rem;">
-      <v-col v-for="plugin in paginatedPlugins" :key="plugin.name" cols="12" md="6" lg="4">
+      <template v-if="refreshingMarket && paginatedPlugins.length === 0">
+        <v-col
+          v-for="n in 6"
+          :key="`skeleton-${n}`"
+          cols="12"
+          md="6"
+          lg="4"
+        >
+          <v-skeleton-loader type="card" class="rounded-lg" />
+        </v-col>
+      </template>
+
+      <v-col v-else v-for="plugin in paginatedPlugins" :key="plugin.name" cols="12" md="6" lg="4">
         <v-card class="rounded-lg d-flex flex-column plugin-card" elevation="0" style="height: 12rem; position: relative;">
           <v-chip v-if="plugin?.pinned" color="warning" size="x-small" label style="position: absolute; right: 8px; top: 8px; z-index: 10; height: 20px; font-weight: bold;">
             🥳 {{ tm('market.recommended') }}
