@@ -101,8 +101,8 @@
                                         <span class="reasoning-label">{{ tm('reasoning.thinking') }}</span>
                                     </div>
                                     <div v-if="isReasoningExpanded(index)" class="reasoning-content">
-                                        <MarkdownRender :content="msg.content.reasoning"
-                                            class="reasoning-text markdown-content" :typewriter="false"
+                                        <MarkdownContent :content="msg.content.reasoning"
+                                            class="reasoning-text" :typewriter="false" :preprocess-badges="false"
                                             :style="isDark ? { opacity: '0.85' } : {}" :is-dark="isDark" />
                                     </div>
                                 </div>
@@ -168,10 +168,13 @@
                                         </div>
                                     </div>
 
-                                    <!-- Text (Markdown) -->
-                                    <MarkdownRender v-else-if="part.type === 'plain' && part.text && part.text.trim()"
-                                        :content="part.text" :typewriter="false" class="markdown-content"
-                                        :is-dark="isDark" :monacoOptions="{ theme: isDark ? 'vs-dark' : 'vs-light' }" />
+                                    <!-- Text (Markdown / Plain multi-line logs) -->
+                                    <template v-else-if="part.type === 'plain' && part.text && part.text.trim()">
+                                        <pre v-if="shouldRenderAsPlainPre(part.text)" class="bot-plain-pre">{{ formatPlainPreText(part.text) }}</pre>
+                                        <MarkdownContent v-else
+                                            :content="part.text" :typewriter="false" :preprocess-badges="false"
+                                            :is-dark="isDark" />
+                                    </template>
 
                                     <!-- Image -->
                                     <div v-else-if="part.type === 'image' && part.embedded_url" class="embedded-images">
@@ -277,25 +280,20 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
+import type { PropType } from 'vue'
 import { useI18n, useModuleI18n } from '@/i18n/composables';
-import { MarkdownRender, enableKatex, enableMermaid } from 'markstream-vue'
-import 'markstream-vue/index.css'
-import 'katex/dist/katex.min.css'
-import 'highlight.js/styles/github.css';
 import axios from 'axios';
-
-enableKatex();
-enableMermaid();
+import MarkdownContent from '@/components/shared/MarkdownContent.vue';
 
 export default {
     name: 'MessageList',
     components: {
-        MarkdownRender
+        MarkdownContent
     },
     props: {
         messages: {
-            type: Array,
+            type: Array as PropType<any[]>,
             required: true
         },
         isDark: {
@@ -318,7 +316,7 @@ export default {
 
         return {
             t,
-            tm
+            tm,
         };
     },
     data() {
@@ -326,11 +324,11 @@ export default {
             copiedMessages: new Set(),
             isUserNearBottom: true,
             scrollThreshold: 1,
-            scrollTimer: null,
+            scrollTimer: null as any,
             expandedReasoning: new Set(), // Track which reasoning blocks are expanded
             downloadingFiles: new Set(), // Track which files are being downloaded
             expandedToolCalls: new Set(), // Track which tool call cards are expanded
-            elapsedTimeTimer: null, // Timer for updating elapsed time
+            elapsedTimeTimer: null as any, // Timer for updating elapsed time
             currentTime: Date.now() / 1000, // Current time for elapsed time calculation
         };
     },
@@ -349,6 +347,66 @@ export default {
         }
     },
     methods: {
+        formatPlainPreText(text: string): string {
+            const raw = (text ?? '').toString();
+            if (!raw) return raw;
+
+            // 1) If it's a single-line command tree (contains ├──/└──), insert newlines.
+            if (!raw.includes('\n') && (raw.includes('├──') || raw.includes('└──'))) {
+                let s = raw;
+
+                // Normalize spaces so the rules below work reliably.
+                s = s.replace(/\s+/g, ' ').trim();
+
+                // Put the root token (e.g. "gh") on its own line when followed by a tree branch.
+                // Example: "gh ├── help" => "gh\n├── help"
+                s = s.replace(/\b([\w-]+)\s+(?=(?:├──|└──))/g, '$1\n');
+
+                // Newline before each branch marker.
+                s = s.replace(/\s*(├──|└──)\s*/g, '\n$1 ');
+
+                // Also split some common Chinese hints into their own lines.
+                s = s.replace(/(参数不足。)\s*/g, '$1\n');
+                s = s.replace(/(指令组下有如下指令[，,:：]?\s*)/g, '$1\n');
+
+                return s.replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n');
+            }
+
+            return raw;
+        },
+
+        shouldRenderAsPlainPre(text: string): boolean {
+            const trimmed = (text ?? '').trim();
+
+            // Command tree sometimes comes as a single line.
+            if (trimmed.includes('├──') || trimmed.includes('└──')) return true;
+
+            if (!trimmed.includes('\n')) return false;
+
+            const lines = trimmed
+                .split(/\r?\n/)
+                .map(l => l.trim())
+                .filter(Boolean);
+
+            if (lines.length < 3) return false;
+
+            const cmdLines = lines.filter(l => l.startsWith('/')).length;
+            const logLines = lines.filter(l => /^\[\d{2}:\d{2}:\d{2}\]/.test(l) || /^\[\d{4}-\d{2}-\d{2}/.test(l)).length;
+            const hasBuiltinHeader = lines.some(l => /内置指令|Built-?in\s+commands/i.test(l));
+            const hasCommandTreeHeader = lines.some(l => /指令组下有如下指令/i.test(l));
+
+            if (hasBuiltinHeader && cmdLines >= 2) return true;
+            if (hasCommandTreeHeader) return true;
+            if (cmdLines >= Math.max(5, Math.floor(lines.length * 0.5))) return true;
+            if (logLines >= 1 && lines.length >= 3) return true;
+            return false;
+        },
+
+        getMessageContainerEl(): HTMLElement | null {
+            const containerRef: any = this.$refs.messageContainer;
+            return (containerRef?.$el ?? containerRef) as HTMLElement | null;
+        },
+
         // 检查 message 中是否有音频
         hasAudio(messageParts) {
             if (!Array.isArray(messageParts)) return false;
@@ -380,8 +438,8 @@ export default {
             const msgIndex = this.messages.findIndex(m => m.id === messageId);
             if (msgIndex === -1) return;
 
-            const container = this.$refs.messageContainer;
-            const messageItems = container?.querySelectorAll('.message-item');
+            const container = this.getMessageContainerEl();
+            const messageItems = container?.querySelectorAll<HTMLElement>('.message-item');
             if (messageItems && messageItems[msgIndex]) {
                 messageItems[msgIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // 高亮一下
@@ -543,16 +601,17 @@ export default {
         // 初始化代码块复制按钮
         initCodeCopyButtons() {
             this.$nextTick(() => {
-                const codeBlocks = this.$refs.messageContainer?.querySelectorAll('pre code') || [];
+                const container = this.getMessageContainerEl();
+                const codeBlocks = container?.querySelectorAll<HTMLElement>('pre code') || [];
                 codeBlocks.forEach((codeBlock, index) => {
-                    const pre = codeBlock.parentElement;
+                    const pre = codeBlock.parentElement as HTMLElement | null;
                     if (pre && !pre.querySelector('.copy-code-btn')) {
                         const button = document.createElement('button');
                         button.className = 'copy-code-btn';
                         button.innerHTML = this.getCopyIconSvg();
                         button.title = '复制代码';
                         button.addEventListener('click', () => {
-                            this.copyCodeToClipboard(codeBlock.textContent);
+                            this.copyCodeToClipboard(codeBlock.textContent || '');
                             // 显示复制成功提示
                             button.innerHTML = this.getSuccessIconSvg();
                             button.style.color = '#4caf50';
@@ -571,7 +630,7 @@ export default {
         initImageClickEvents() {
             this.$nextTick(() => {
                 // 查找所有动态生成的图片（在markdown-content中）
-                const images = document.querySelectorAll('.markdown-content img');
+                const images = document.querySelectorAll<HTMLImageElement>('.markdown-content img');
                 images.forEach((img) => {
                     if (!img.hasAttribute('data-click-enabled')) {
                         img.style.cursor = 'pointer';
@@ -584,7 +643,7 @@ export default {
 
         scrollToBottom() {
             this.$nextTick(() => {
-                const container = this.$refs.messageContainer;
+                const container = this.getMessageContainerEl();
                 if (container) {
                     container.scrollTop = container.scrollHeight;
                     this.isUserNearBottom = true; // 程序滚动到底部后标记用户在底部
@@ -594,9 +653,9 @@ export default {
 
         // 添加滚动事件监听器
         addScrollListener() {
-            const container = this.$refs.messageContainer;
+            const container = this.getMessageContainerEl();
             if (container) {
-                container.addEventListener('scroll', this.throttledHandleScroll);
+                container.addEventListener('scroll', this.throttledHandleScroll as any);
             }
         },
 
@@ -612,9 +671,10 @@ export default {
 
         // 处理滚动事件
         handleScroll() {
-            const container = this.$refs.messageContainer;
+            const containerRef: any = this.$refs.messageContainer;
+            const container: any = containerRef?.$el || containerRef;
             if (container) {
-                const { scrollTop, scrollHeight, clientHeight } = container;
+                const { scrollTop, scrollHeight, clientHeight } = container as any;
                 const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
                 // 判断用户是否在底部附近
@@ -624,8 +684,9 @@ export default {
 
         // 组件销毁时移除监听器
         beforeUnmount() {
-            const container = this.$refs.messageContainer;
-            if (container) {
+            const containerRef: any = this.$refs.messageContainer;
+            const container: any = containerRef?.$el || containerRef;
+            if (container && typeof container.removeEventListener === 'function') {
                 container.removeEventListener('scroll', this.throttledHandleScroll);
             }
             // 清理定时器
@@ -698,17 +759,17 @@ export default {
                 this.currentTime = Date.now() / 1000;
 
                 // Check if there are any running tool calls
-                const hasRunningToolCalls = this.messages.some(msg =>
-                    Array.isArray(msg.content.message) && msg.content.message.some(part =>
-                        part.type === 'tool_call' && part.tool_calls?.some(tc => !tc.finished_ts)
+                const hasRunningToolCalls = (this.messages as any[]).some((msg: any) =>
+                    Array.isArray(msg?.content?.message) && msg.content.message.some((part: any) =>
+                        part?.type === 'tool_call' && part.tool_calls?.some((tc: any) => !tc.finished_ts)
                     )
                 );
 
                 if (hasRunningToolCalls) {
                     // Check if any running tool call is under 1 second
-                    const hasSubSecondToolCall = this.messages.some(msg =>
-                        Array.isArray(msg.content.message) && msg.content.message.some(part =>
-                            part.type === 'tool_call' && part.tool_calls?.some(tc =>
+                    const hasSubSecondToolCall = (this.messages as any[]).some((msg: any) =>
+                        Array.isArray(msg?.content?.message) && msg.content.message.some((part: any) =>
+                            part?.type === 'tool_call' && part.tool_calls?.some((tc: any) =>
                                 !tc.finished_ts && (this.currentTime - tc.ts) < 1
                             )
                         )
@@ -1428,6 +1489,13 @@ export default {
     max-height: 200px;
     overflow-y: auto;
     margin: 0;
+}
+
+.bot-plain-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: inherit;
 }
 
 .detail-result {
