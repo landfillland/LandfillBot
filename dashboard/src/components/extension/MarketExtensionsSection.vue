@@ -39,7 +39,7 @@
     </v-tooltip>
   </div>
 
-  <v-dialog v-model="sourceDialog" max-width="480">
+  <v-dialog v-model="sourceDialog" max-width="480" scroll-strategy="block" scroll-target="body">
     <v-card style="height: 520px; display: flex; flex-direction: column;">
       <v-card-title class="d-flex align-center">
         <v-icon size="small" class="mr-2">mdi-source-branch</v-icon>
@@ -185,13 +185,19 @@
       </div>
     </div>
 
-    <v-dialog v-model="cartDialog" max-width="720">
+    <v-dialog v-model="cartDialog" max-width="720" scroll-strategy="block" scroll-target="body">
       <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">mdi-cart</v-icon>
-          {{ tm('market.cart.title') }}
-          <v-spacer></v-spacer>
-          <v-chip size="small" color="primary" variant="tonal">{{ cartCount }}</v-chip>
+        <v-card-title class="d-flex align-center justify-space-between">
+          <div class="d-flex align-center" style="gap: 8px; min-width: 0;">
+            <v-icon>mdi-cart</v-icon>
+            <span class="text-subtitle-1 font-weight-medium">{{ tm('market.cart.title') }}</span>
+            <v-chip size="small" color="primary" variant="tonal">{{ cartCount }}</v-chip>
+          </div>
+
+          <v-btn icon variant="text" @click="cartDialog = false">
+            <v-icon>mdi-close</v-icon>
+            <v-tooltip activator="parent" location="top">{{ tm('buttons.close') }}</v-tooltip>
+          </v-btn>
         </v-card-title>
 
         <v-divider></v-divider>
