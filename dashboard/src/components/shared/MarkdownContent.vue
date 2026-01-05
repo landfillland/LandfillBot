@@ -47,6 +47,7 @@ const mergedClass = computed(() => {
       v-bind="forwardedAttrs"
       :content="normalizedContent"
       :typewriter="typewriter"
+      :render-code-blocks-as-pre="true"
       :class="mergedClass"
     />
   </div>
