@@ -65,7 +65,7 @@
                         :stagedImagesUrl="stagedImagesUrl"
                         :stagedAudioUrl="stagedAudioUrl"
                         :stagedFiles="stagedNonImageFiles"
-                        :disabled="isStreaming"
+                        :disabled="isStreaming || isConvRunning || isLoadingMessages"
                         :enableStreaming="enableStreaming"
                         :isRecording="isRecording"
                         :session-id="currSessionId || null"
@@ -123,6 +123,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router';
 import { useCustomizerStore } from '@/stores/customizer';
 import { useI18n, useModuleI18n } from '@/i18n/composables';
+import { useToast } from '@/utils/toast';
 import { useTheme } from 'vuetify';
 import MessageList from '@/components/chat/MessageList.vue';
 import ConversationSidebar from '@/components/chat/ConversationSidebar.vue';
@@ -153,6 +154,40 @@ const imagePreviewDialog = ref(false);
 const previewImageUrl = ref('');
 const isLoadingMessages = ref(false);
 
+let resyncTimer: number | null = null;
+
+function scheduleResyncCurrentSession() {
+    if (resyncTimer !== null) {
+        window.clearTimeout(resyncTimer);
+        resyncTimer = null;
+    }
+
+    // 轻微 debounce，避免 focus/visibility 事件连发
+    resyncTimer = window.setTimeout(async () => {
+        resyncTimer = null;
+
+        if (!currSessionId.value) return;
+        if (isLoadingMessages.value) return;
+        if (isStreaming.value || isConvRunning.value) return;
+
+        try {
+            await getSessionMsg(currSessionId.value);
+        } catch {
+            // ignore
+        }
+    }, 200);
+}
+
+function handleWindowFocus() {
+    scheduleResyncCurrentSession();
+}
+
+function handleVisibilityChange() {
+    if (!document.hidden) {
+        scheduleResyncCurrentSession();
+    }
+}
+
 // 使用 composables
 const {
     sessions,
@@ -161,7 +196,6 @@ const {
     pendingSessionId,
     editTitleDialog,
     editingTitle,
-    editingSessionId,
     getCurrentSession,
     getSessions,
     newSession,
@@ -354,6 +388,14 @@ async function handleFileSelect(files: FileList) {
 }
 
 async function handleSendMessage() {
+    if (isLoadingMessages.value) {
+        return;
+    }
+    if (isStreaming.value || isConvRunning.value) {
+        useToast().info(tm('errors.sessionRunning'), { timeout: 3000 });
+        return;
+    }
+
     // 只有引用不能发送，必须有输入内容
     if (!prompt.value.trim() && stagedFiles.value.length === 0 && !stagedAudioUrl.value) {
         return;
@@ -439,11 +481,19 @@ watch(sessions, (newSessions) => {
 onMounted(() => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     getSessions();
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('resize', checkMobile);
+    window.removeEventListener('focus', handleWindowFocus);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (resyncTimer !== null) {
+        window.clearTimeout(resyncTimer);
+        resyncTimer = null;
+    }
     cleanupMediaCache();
 });
 </script>

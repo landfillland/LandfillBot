@@ -287,7 +287,8 @@ class ChatRoute(Route):
             return Response().error("session_id is empty").__dict__
 
         webchat_conv_id = session_id
-        back_queue = webchat_queue_mgr.get_or_create_back_queue(webchat_conv_id)
+        stream_id = uuid.uuid4().hex
+        back_queue = webchat_queue_mgr.get_or_create_back_queue(stream_id)
 
         # 构建用户消息段（包含 path 用于传递给 adapter）
         message_parts = await self._build_user_message_parts(message)
@@ -301,7 +302,9 @@ class ChatRoute(Route):
             agent_stats = {}
             try:
                 async with track_conversation(self.running_convs, webchat_conv_id):
+                    result = None
                     while True:
+                        result = None
                         try:
                             result = await asyncio.wait_for(back_queue.get(), timeout=1)
                         except asyncio.TimeoutError:
@@ -309,8 +312,10 @@ class ChatRoute(Route):
                         except asyncio.CancelledError:
                             logger.debug(f"[WebChat] 用户 {username} 断开聊天长连接。")
                             client_disconnected = True
+                            continue
                         except Exception as e:
                             logger.error(f"WebChat stream error: {e}")
+                            continue
 
                         if not result:
                             continue
@@ -346,6 +351,8 @@ class ChatRoute(Route):
                         except asyncio.CancelledError:
                             logger.debug(f"[WebChat] 用户 {username} 断开聊天长连接。")
                             client_disconnected = True
+                            # 不退出：继续消费队列以确保落库
+                            continue
 
                         # 累积消息部分
                         if msg_type == "plain":
@@ -440,6 +447,8 @@ class ChatRoute(Route):
                             agent_stats = {}
             except BaseException as e:
                 logger.exception(f"WebChat stream unexpected error: {e}", exc_info=True)
+            finally:
+                webchat_queue_mgr.remove_back_queue(stream_id)
 
         # 将消息放入会话特定的队列
         chat_queue = webchat_queue_mgr.get_or_create_queue(webchat_conv_id)
@@ -452,6 +461,7 @@ class ChatRoute(Route):
                     "selected_provider": selected_provider,
                     "selected_model": selected_model,
                     "enable_streaming": enable_streaming,
+                    "stream_id": stream_id,
                 },
             ),
         )

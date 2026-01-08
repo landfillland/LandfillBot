@@ -106,6 +106,7 @@
   },
   "errors": {
     "sendMessageFailed": "Failed to send message, please try again",
-    "createSessionFailed": "Failed to create session, please refresh the page"
+    "createSessionFailed": "Failed to create session, please refresh the page",
+    "sessionRunning": "This session is generating a reply. Please wait before sending."
   }
 } 

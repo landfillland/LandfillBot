@@ -326,6 +326,11 @@ watch(() => customizer.viewMode, (newMode, oldMode) => {
     if (route.path !== '/') {
       router.push('/');
     }
+  } else if (newMode === 'chat' && oldMode === 'bot') {
+    // 从 bot 模式切换到 chat 模式时，跳转到 chat 页面
+    if (!route.path.startsWith('/chat')) {
+      router.push('/chat');
+    }
   }
 });
 

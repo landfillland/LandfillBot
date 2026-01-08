@@ -25,7 +25,8 @@ const showSidebar = computed(() => {
 
 // 计算是否显示 chat 页面（在 chat 模式下显示）
 const showChatPage = computed(() => {
-  return customizer.viewMode === 'chat';
+  // 避免 viewMode 与 route 脱节导致“Bot 路由显示 Chat 内容”
+  return customizer.viewMode === 'chat' && route.path.startsWith('/chat');
 });
 
 const migrationDialog = ref<InstanceType<typeof MigrationDialog> | null>(null);
