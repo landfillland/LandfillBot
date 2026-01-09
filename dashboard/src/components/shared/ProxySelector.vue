@@ -1,8 +1,8 @@
 <template>
     <h5>{{ tm('network.proxySelector.title') }}</h5>
     <v-radio-group class="mt-2" v-model="radioValue" :hide-details="true">
-        <v-radio :label="tm('network.proxySelector.noProxy')" value="0"></v-radio>
-        <v-radio value="1">
+        <v-radio :label="tm('network.proxySelector.noProxy')" value="0" color="primary"></v-radio>
+        <v-radio value="1" color="primary">
             <template v-slot:label>
                 <span>{{ tm('network.proxySelector.useProxy') }}</span>
                 <v-btn v-if="radioValue === '1'" class="ml-2" @click="testAllProxies" size="x-small"
@@ -15,7 +15,7 @@
     <v-expand-transition>
         <div v-if="radioValue === '1'" style="margin-left: 16px;">
             <v-radio-group v-model="githubProxyRadioControl" class="mt-2" :hide-details="true">
-                <v-radio color="success" v-for="(proxy, idx) in githubProxies" :key="proxy" :value="idx">
+                <v-radio v-for="(proxy, idx) in githubProxies" :key="proxy" :value="idx">
                     <template v-slot:label>
                         <div class="d-flex align-center">
                             <span class="mr-2">{{ proxy }}</span>
@@ -36,7 +36,7 @@
                         </div>
                     </template>
                 </v-radio>
-                <v-radio color="primary" value="-1" :label="tm('network.proxySelector.custom')">
+                <v-radio value="-1" :label="tm('network.proxySelector.custom')">
                     <template v-slot:label v-if="githubProxyRadioControl === '-1'">
                         <v-text-field density="compact" v-model="selectedGitHubProxy" variant="outlined"
                             style="width: 100vw;" :placeholder="tm('network.proxySelector.custom')" :hide-details="true">
