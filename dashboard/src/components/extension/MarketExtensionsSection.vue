@@ -378,27 +378,27 @@
                   :disabled="!!plugin?.installed"
                   @click="emit('toggle-cart', plugin)"
                 >
-                  <v-icon size="small">{{ isInCart(plugin) ? 'mdi-cart-remove' : 'mdi-cart-plus' }}</v-icon>
+                  <v-icon size="20">{{ isInCart(plugin) ? 'mdi-cart-remove' : 'mdi-cart-plus' }}</v-icon>
                 </v-btn>
               </template>
             </v-tooltip>
 
-            <v-btn v-if="plugin?.repo" color="secondary" size="small" variant="tonal" :href="plugin.repo" target="_blank" style="height: 32px;">
-              <v-icon icon="mdi-github" start size="small"></v-icon>
+            <v-btn v-if="plugin?.repo" color="secondary" size="70" variant="tonal" :href="plugin.repo" target="_blank" style="height: 32px;">
+              <v-icon icon="mdi-github" start size="20"></v-icon>
               {{ tm('buttons.viewRepo') }}
             </v-btn>
 
             <v-btn
               v-if="!plugin?.installed"
               color="primary"
-              size="small"
+              size="50"
               @click="emit('handle-install-plugin', plugin)"
               variant="flat"
               style="height: 32px;"
             >
               {{ tm('buttons.install') }}
             </v-btn>
-            <v-btn v-else color="success" size="small" variant="tonal" disabled style="height: 32px;">
+            <v-btn v-else color="success" size="70" variant="tonal" disabled style="height: 32px;">
               ✓ {{ tm('status.installed') }}
             </v-btn>
           </template>
@@ -543,6 +543,10 @@ const toItemCardPlugin = (plugin: PluginMarketItem) => {
   flex-direction: column;
   gap: 12px;
   pointer-events: none;
+}
+
+.market-page {
+  padding-bottom: 70px;
 }
 
 @media (max-width: 600px) {
