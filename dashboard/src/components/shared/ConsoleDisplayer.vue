@@ -1,5 +1,4 @@
-<script setup>
-import { useCommonStore } from '@/stores/common';
+<script setup lang="ts">
 import axios from 'axios';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 </script>
@@ -20,11 +19,12 @@ import { EventSourcePolyfill } from 'event-source-polyfill';
   </div>
 </template>
 
-<script>
+<script lang="ts">
 export default {
   name: 'ConsoleDisplayer',
   data() {
     return {
+      maxLocalLogCacheLen: 1000,
       autoScroll: true,
       logColorAnsiMap: {
         '\u001b[1;34m': 'color: #0000FF; font-weight: bold;',
@@ -54,11 +54,6 @@ export default {
       lastEventId: null,          
     }
   },
-  computed: {
-    commonStore() {
-      return useCommonStore();
-    },
-  },
   props: {
     historyNum: {
       type: String,
@@ -79,7 +74,11 @@ export default {
   },
   async mounted() {
     await this.fetchLogHistory();
-    this.connectSSE();
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.connectSSE();
+    }
   },
   beforeUnmount() {
     if (this.eventSource) {
@@ -102,6 +101,10 @@ export default {
       console.log(`正在连接日志流... (尝试次数: ${this.retryAttempts})`);
       
       const token = localStorage.getItem('token');
+      if (!token) {
+        // 未登录时不要连接（否则后端会刷大量 401）
+        return;
+      }
 
       this.eventSource = new EventSourcePolyfill('/api/live-log', {
         headers: {
@@ -135,12 +138,22 @@ export default {
 
       this.eventSource.onerror = (err) => {
 
-        if (err.status === 401) {
-            console.error('鉴权失败 (401)，可能是 Token 过期了。');
-
-        } else {
-            console.warn('日志流连接错误:', err);
+        const status = (err as any)?.status;
+        if (status === 401 || status === 403) {
+          console.error(`鉴权失败 (${status})，停止重连。请重新登录/刷新页面。`);
+          if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+          }
+          if (this.retryTimer) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+          }
+          this.retryAttempts = this.maxRetryAttempts;
+          return;
         }
+
+        console.warn('日志流连接错误:', err);
         
         if (this.eventSource) {
             this.eventSource.close();
@@ -202,7 +215,7 @@ export default {
       if (hasUpdate) {
         this.localLogCache.sort((a, b) => a.time - b.time);
         
-        const maxSize = this.commonStore.log_cache_max_len || 200;
+        const maxSize = this.maxLocalLogCacheLen || 200;
         if (this.localLogCache.length > maxSize) {
            this.localLogCache.splice(0, this.localLogCache.length - maxSize);
         }
@@ -269,7 +282,9 @@ export default {
         }
       }
 
-      span.style = style + 'display: block; font-size: 12px; font-family: Consolas, monospace; white-space: pre-wrap; margin-bottom: 2px;'
+      span.style.cssText =
+        style +
+        'display: block; font-size: 12px; font-family: Consolas, monospace; white-space: pre-wrap; margin-bottom: 2px;'
       span.classList.add('fade-in')
       span.innerText = `${log}`;
       ele.appendChild(span)
