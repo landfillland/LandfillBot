@@ -104,6 +104,7 @@ interface StagedFileInfo {
 interface ReplyInfo {
     messageId: number;
     selectedText?: string;
+    messageContent?: string;
 }
 
 interface Props {
