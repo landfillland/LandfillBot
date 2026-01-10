@@ -54,7 +54,7 @@ jobs:
         working-directory: dashboard
         run: pnpm run build
 
-      - name: Inject version files and zip dist+sha.zip
+      - name: Inject version files and zip dist.zip
         shell: bash
         run: |
           set -eux
@@ -77,7 +77,7 @@ jobs:
 
           find "${TARGET_DIST}" -type f -name "*.md" -print -delete || true
 
-          ZIP_NAME="dist+sha.zip"
+          ZIP_NAME="dist.zip"
           cd dashboard
           zip -r "../${ZIP_NAME}" dist
           cd -
@@ -90,5 +90,5 @@ jobs:
           prerelease: true
           allowUpdates: true
           replacesArtifacts: true
-          artifacts: dist+sha.zip
+          artifacts: dist.zip
           artifactContentType: application/zip
