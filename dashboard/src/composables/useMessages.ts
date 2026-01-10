@@ -419,6 +419,8 @@ export function useMessages(
             const decoder = new TextDecoder();
             let in_streaming = false;
             let message_obj: MessageContent | null = null;
+            
+            let buffer = '';
 
             isStreaming.value = true;
 
@@ -443,16 +445,25 @@ export function useMessages(
                         break;
                     }
 
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n\n');
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    const lines = buffer.split('\n\n');
+
+                    buffer = lines.pop() || '';
 
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i].trim();
                         if (!line) continue;
 
+                        if (line.startsWith('data: ')) {
+                            line = line.substring(6);
+                        } else if (line.startsWith('data:')) {
+                            line = line.substring(5);
+                        }
+
                         let chunk_json;
                         try {
-                            chunk_json = JSON.parse(line.replace('data: ', ''));
+                            chunk_json = JSON.parse(line);
                         } catch (parseError) {
                             console.warn('JSON解析失败:', line, parseError);
                             continue;
