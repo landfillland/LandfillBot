@@ -285,3 +285,34 @@ async def download_dashboard(
         await download_file(url, str(zip_path), show_progress=True)
     with zipfile.ZipFile(zip_path, "r") as z:
         z.extractall(extract_path)
+
+
+async def download_landfill_dashboard_nightly(
+    path: str | None = None,
+    extract_path: str = "data",
+    proxy: str | None = None,
+) -> None:
+    """下载 LandfillBot nightly WebUI(dist.zip) 并解压到 data/dist。
+
+    下载源：LandfillLand/LandfillBot release tag `nightly` 的 dist.zip。
+    """
+
+    if path is None:
+        zip_path = Path(get_astrbot_data_path()).absolute() / "dashboard.zip"
+    else:
+        zip_path = Path(path).absolute()
+
+    url = "https://github.com/LandfillLand/LandfillBot/releases/download/nightly/dist.zip"
+    if proxy:
+        proxy = proxy.removesuffix("/")
+        url = f"{proxy}/{url}"
+
+    logger.info(f"准备下载 LandfillBot Nightly WebUI 文件: {url}")
+    await download_file(url, str(zip_path), show_progress=True)
+
+    target_dist = Path(extract_path).absolute() / "dist"
+    if target_dist.exists():
+        remove_dir(str(target_dist))
+
+    with zipfile.ZipFile(zip_path, "r") as z:
+        z.extractall(extract_path)

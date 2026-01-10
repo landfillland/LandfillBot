@@ -7,7 +7,11 @@ from astrbot.core.config.default import VERSION
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.db.migration.helper import check_migration_needed_v4, do_migration_v4
 from astrbot.core.updator import AstrBotUpdator
-from astrbot.core.utils.io import download_dashboard, get_dashboard_version
+from astrbot.core.utils.io import (
+    download_dashboard,
+    download_landfill_dashboard_nightly,
+    get_dashboard_version,
+)
 
 from .route import Response, Route, RouteContext
 
@@ -120,62 +124,19 @@ class UpdateRoute(Route):
         if proxy:
             proxy = proxy.removesuffix("/")
 
-        if channel == "landfill":
-            # 从指定仓库拉取最新源码（无 releases 也可用：会回退到默认分支 zip）
-            repo_url = "https://github.com/LandfillLand/LandfillBot"
-            try:
-                await self.astrbot_updator.download_from_repo_url(
-                    target_path="temp",
-                    repo_url=repo_url,
-                    proxy=proxy or "",
-                )
-                self.astrbot_updator.unzip_file(
-                    "temp.zip", self.astrbot_updator.MAIN_PATH
-                )
-
-                # pip 更新依赖
-                logger.info("更新依赖中...")
-                try:
-                    await pip_installer.install(requirements_path="requirements.txt")
-                except Exception as e:
-                    logger.error(f"更新依赖失败: {e}")
-
-                if reboot:
-                    await self.core_lifecycle.restart()
-                    ret = (
-                        Response()
-                        .ok(
-                            None,
-                            "更新成功（已从 LandfillBot 源码渠道拉取最新代码）。AstrBot 将在 2 秒内全量重启。",
-                        )
-                        .__dict__
-                    )
-                    return ret, 200, CLEAR_SITE_DATA_HEADERS
-
-                ret = (
-                    Response()
-                    .ok(
-                        None,
-                        "更新成功（已从 LandfillBot 源码渠道拉取最新代码）。AstrBot 将在下次启动时应用新的代码。",
-                    )
-                    .__dict__
-                )
-                return ret, 200, CLEAR_SITE_DATA_HEADERS
-            except Exception as e:
-                logger.error(
-                    f"/api/update_project (landfill): {traceback.format_exc()}"
-                )
-                return Response().error(e.__str__()).__dict__
-
         try:
             await self.astrbot_updator.update(
                 latest=latest,
                 version=version,
                 proxy=proxy,
+                channel=channel,
             )
 
             try:
-                await download_dashboard(latest=latest, version=version, proxy=proxy)
+                if channel == "landfill":
+                    await download_landfill_dashboard_nightly(proxy=proxy)
+                else:
+                    await download_dashboard(latest=latest, version=version, proxy=proxy)
             except Exception as e:
                 logger.error(f"下载管理面板文件失败: {e}。")
 
@@ -207,7 +168,16 @@ class UpdateRoute(Route):
     async def update_dashboard(self):
         try:
             try:
-                await download_dashboard(version=f"v{VERSION}", latest=False)
+                data = await request.get_json(silent=True) or {}
+                channel = data.get("channel", "official")
+                proxy: str | None = data.get("proxy", None)
+                if proxy:
+                    proxy = proxy.removesuffix("/")
+
+                if channel == "landfill":
+                    await download_landfill_dashboard_nightly(proxy=proxy)
+                else:
+                    await download_dashboard(version=f"v{VERSION}", latest=False, proxy=proxy)
             except Exception as e:
                 logger.error(f"下载管理面板文件失败: {e}。")
                 return Response().error(f"下载管理面板文件失败: {e}").__dict__
