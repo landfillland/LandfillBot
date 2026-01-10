@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useCustomizerStore } from '@/stores/customizer';
 import axios from 'axios';
 import { useCommonStore } from '@/stores/common';
@@ -76,6 +76,24 @@ const viewMode = computed({
     customizer.SET_VIEW_MODE(value);
   }
 });
+
+function syncViewModeFromRoute(path: string) {
+  const routeMode: 'bot' | 'chat' = path.startsWith('/chat') ? 'chat' : 'bot'
+  if (customizer.viewMode !== routeMode) {
+    customizer.SET_VIEW_MODE(routeMode)
+  }
+}
+
+onMounted(() => {
+  syncViewModeFromRoute(route.path)
+})
+
+watch(
+  () => route.path,
+  (newPath) => {
+    syncViewModeFromRoute(newPath)
+  }
+)
 
 // 监听 viewMode 变化，切换到 bot 模式时跳转到首页
 watch(() => customizer.viewMode, (newMode, oldMode) => {
