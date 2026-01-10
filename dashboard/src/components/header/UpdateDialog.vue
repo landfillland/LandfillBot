@@ -614,7 +614,7 @@ const dialogModel = computed({
 
                     <v-btn
                       color="primary"
-                      width="120"
+                      min-width="120"
                       prepend-icon="mdi-update"
                       @click="updateDashboard()"
                       :loading="updatingDashboardLoading"
