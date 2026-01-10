@@ -14,7 +14,7 @@ import { EventSourcePolyfill } from 'event-source-polyfill';
       </v-chip-group>
     </div>
 
-    <div id="term" style="background-color: #1e1e1e; padding: 16px; border-radius: 8px; overflow-y:auto; height: 100%">
+    <div ref="term" style="background-color: #1e1e1e; padding: 16px; border-radius: 8px; overflow-y:auto; height: 100%">
     </div>
   </div>
 </template>
@@ -92,6 +92,20 @@ export default {
     this.retryAttempts = 0;
   },
   methods: {
+    normalizeLog(log) {
+      const rawTime = (log && Object.prototype.hasOwnProperty.call(log, 'time')) ? log.time : 0;
+      const timeNum = typeof rawTime === 'string' ? Number.parseFloat(rawTime) : Number(rawTime ?? 0);
+      const timeMs = Number.isFinite(timeNum) ? Math.round(timeNum * 1000) : 0;
+
+      return {
+        ...log,
+        time: Number.isFinite(timeNum) ? timeNum : 0,
+        __timeMs: timeMs,
+        level: (log?.level ?? '').toString(),
+        data: (log?.data ?? '').toString(),
+      };
+    },
+
     connectSSE() {
       if (this.eventSource) {
         this.eventSource.close();
@@ -118,8 +132,8 @@ export default {
         console.log('日志流连接成功！');
         this.retryAttempts = 0;
 
-        if (!this.lastEventId) {
-            this.fetchLogHistory();
+        if (this.localLogCache.length === 0) {
+          this.fetchLogHistory();
         }
       };
 
@@ -196,24 +210,26 @@ export default {
 
       newLogs.forEach(log => {
 
-        const exists = this.localLogCache.some(existing => 
-          existing.time === log.time && 
-          existing.data === log.data &&
-          existing.level === log.level
+        const normalized = this.normalizeLog(log);
+
+        const exists = this.localLogCache.some(existing =>
+          existing.__timeMs === normalized.__timeMs &&
+          existing.data === normalized.data &&
+          existing.level === normalized.level
         );
         
         if (!exists) {
-            this.localLogCache.push(log);
+            this.localLogCache.push(normalized);
             hasUpdate = true;
             
-            if (this.isLevelSelected(log.level)) {
-              this.printLog(log.data);
+            if (this.isLevelSelected(normalized.level)) {
+              this.printLog(normalized.data);
             }
         }
       });
 
       if (hasUpdate) {
-        this.localLogCache.sort((a, b) => a.time - b.time);
+        this.localLogCache.sort((a, b) => a.__timeMs - b.__timeMs);
         
         const maxSize = this.maxLocalLogCacheLen || 200;
         if (this.localLogCache.length > maxSize) {
@@ -248,7 +264,7 @@ export default {
     },
 
     refreshDisplay() {
-      const termElement = document.getElementById('term');
+      const termElement = this.$refs.term as HTMLElement | undefined;
       if (termElement) {
         termElement.innerHTML = '';
         
@@ -267,7 +283,7 @@ export default {
     },
 
     printLog(log) {
-      let ele = document.getElementById('term')
+      const ele = this.$refs.term as HTMLElement | undefined;
       if (!ele) {
         return;
       }
