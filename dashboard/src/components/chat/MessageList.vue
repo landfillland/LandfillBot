@@ -163,7 +163,7 @@
                                                     <span class="detail-label">Result:</span>
                                                     <pre class="detail-value detail-json detail-result"
                                                         :style="isDark ? { backgroundColor: 'transparent' } : {}">{{ formatToolResult(toolCall.result) }}
-                </pre>
+                                                    </pre>
                                                 </div>
                                             </div>
                                         </div>
@@ -367,6 +367,31 @@ export default {
         }
     },
     methods: {
+        // 复制文本到剪贴板（不使用已弃用的 document.execCommand）
+        // 成功返回 true，失败返回 false。
+        async copyTextToClipboard(text: string): Promise<boolean> {
+            const value = (text ?? '').toString();
+            if (!value) return false;
+
+            try {
+                // 现代浏览器：优先使用 Clipboard API
+                if (navigator?.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(value);
+                    return true;
+                }
+            } catch (err) {
+                console.warn('Clipboard API failed, fallback to prompt:', err);
+            }
+
+            // 降级方案：弹出 prompt 让用户手动复制（避免使用已弃用 API）
+            try {
+                window.prompt('复制以下内容（Ctrl+C / Cmd+C）：', value);
+                return false;
+            } catch {
+                return false;
+            }
+        },
+
         // 处理文本选择
         handleTextSelection() {
             const selection = window.getSelection();
@@ -595,28 +620,17 @@ export default {
         },
 
         // 复制代码到剪贴板
-        copyCodeToClipboard(code) {
-            navigator.clipboard.writeText(code).then(() => {
+        async copyCodeToClipboard(code) {
+            const ok = await this.copyTextToClipboard(code ?? '');
+            if (ok) {
                 console.log('代码已复制到剪贴板');
-            }).catch(err => {
-                console.error('复制失败:', err);
-                // 如果现代API失败，使用传统方法
-                const textArea = document.createElement('textarea');
-                textArea.value = code;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    console.log('代码已复制到剪贴板 (fallback)');
-                } catch (fallbackErr) {
-                    console.error('复制失败 (fallback):', fallbackErr);
-                }
-                document.body.removeChild(textArea);
-            });
+            } else {
+                console.warn('无法自动复制，已使用降级方案');
+            }
         },
 
         // 复制bot消息到剪贴板
-        copyBotMessage(messageParts, messageIndex) {
+        async copyBotMessage(messageParts, messageIndex) {
             let textToCopy = '';
 
             if (Array.isArray(messageParts)) {
@@ -646,25 +660,13 @@ export default {
                 textToCopy = '[媒体内容]';
             }
 
-            navigator.clipboard.writeText(textToCopy).then(() => {
+            const ok = await this.copyTextToClipboard(textToCopy);
+            if (ok) {
                 console.log('消息已复制到剪贴板');
                 this.showCopySuccess(messageIndex);
-            }).catch(err => {
-                console.error('复制失败:', err);
-                // 如果现代API失败，使用传统方法
-                const textArea = document.createElement('textarea');
-                textArea.value = textToCopy;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    console.log('消息已复制到剪贴板 (fallback)');
-                    this.showCopySuccess(messageIndex);
-                } catch (fallbackErr) {
-                    console.error('复制失败 (fallback):', fallbackErr);
-                }
-                document.body.removeChild(textArea);
-            });
+            } else {
+                console.warn('无法自动复制，已使用降级方案');
+            }
         },
 
         // 显示复制成功提示
@@ -709,15 +711,17 @@ export default {
                         button.className = 'copy-code-btn';
                         button.innerHTML = this.getCopyIconSvg();
                         button.title = '复制代码';
-                        button.addEventListener('click', () => {
-                            this.copyCodeToClipboard(codeBlock.textContent || '');
-                            // 显示复制成功提示
-                            button.innerHTML = this.getSuccessIconSvg();
-                            button.style.color = '#4caf50';
-                            setTimeout(() => {
-                                button.innerHTML = this.getCopyIconSvg();
-                                button.style.color = '';
-                            }, 2000);
+                        button.addEventListener('click', async () => {
+                            const ok = await this.copyTextToClipboard(codeBlock.textContent || '');
+                            if (ok) {
+                                // 显示复制成功提示
+                                button.innerHTML = this.getSuccessIconSvg();
+                                button.style.color = '#4caf50';
+                                setTimeout(() => {
+                                    button.innerHTML = this.getCopyIconSvg();
+                                    button.style.color = '';
+                                }, 2000);
+                            }
                         });
                         pre.style.position = 'relative';
                         pre.appendChild(button);
