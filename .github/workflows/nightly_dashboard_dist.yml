@@ -58,15 +58,14 @@ jobs:
           cd ..
 
           cat <<EOF > release_note.md
-          ## Nightly Dashboard Dist
+          ## **Frontend Artifacts Only**
           
           > [!WARNING]
-          > **Frontend Artifacts Only**
           >
-          > **[EN]** This release is for override updates.   
+          > This release is for override updates.   
           > It is an automated nightly build that **updates frequently** and may contain unstable features.
           >
-          > **[CN]** 此版本适用于覆盖更新。  
+          > 此版本适用于覆盖更新。  
           > 这是一个自动构建的 Nightly 版本，**会随代码提交随时更新**，可能包含不稳定的功能。
 
           ### Build Info
